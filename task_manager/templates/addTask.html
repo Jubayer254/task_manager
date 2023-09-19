@@ -1,0 +1,191 @@
+
+{% extends 'layout.html' %}
+{% block title %}Add Task{% endblock %}
+{% block content %}
+    <center>
+        <h4 class="mb-4">Add Task</h4>
+    </center>
+    <form class="custom-form custom-form-container" method="post" enctype="multipart/form-data">
+        <!-- CSRF Token -->
+        {% csrf_token %}
+        
+        <!-- Input Fields Row (all inputs in one row) -->
+        <div class="row">
+            <!-- Title -->
+            <div class="col-md-2">
+                <div class="mb-3">
+                    <label for="title" class="form-label">Title:</label><span style="color:red">*</span>
+                    <input type="text" class="form-control form-control-sm" id="title" name="title" required>
+                </div>
+            </div>
+            
+            <!-- Description -->
+            <div class="col-md-3">
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description:</label><span style="color:red">*</span>
+                    <textarea class="form-control form-control-sm" id="description" name="description" rows="1" required></textarea>
+                </div>
+            </div>
+            
+            <!-- Photo Upload -->
+            <div class="col-md-3">
+                <div class="mb-3">
+                    <label for="photos" class="form-label">Photos:</label><span style="color:red">*</span>
+                    <input type="file" class="form-control form-control-sm" id="photos" name="photos[]" multiple accept="image/*" required>
+                </div>
+            </div>
+            
+            <!-- Due Date -->
+            <div class="col-md-2">
+                <div class="mb-3">
+                    <label for="dueDate" class="form-label">Due Date:</label><span style="color:red">*</span>
+                    <input type="date" class="form-control form-control-sm" id="dueDate" name="dueDate" required>
+                </div>
+            </div>
+            
+            <!-- Priority -->
+            <div class="col-md-2">
+                <div class="mb-3">
+                    <label for="priority" class="form-label">Priority:</label><span style="color:red">*</span>
+                    <select class="form-select form-select-sm" id="priority" name="priority" required>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="photoList" class="form-label">Uploaded Photos:</label>
+            <div id="photoList" class="d-flex flex-wrap">
+                <!-- Photos will be displayed here -->
+            </div>
+        </div>
+        <!-- Buttons Row (buttons in a separate row) -->
+        <div class="row">
+            <div class="col-4">
+                <!-- Delete Selected Photos Button (Initially Hidden) -->
+                <button type="button" class="btn btn-danger" id="deletePhotos" style="display:none;"><i class="fa-solid fa-trash"></i> Delete Selected Photos</button> 
+                <!-- Add Task Button -->
+                <button type="button" class="btn btn-primary mt-1" id="addTask"><i class="fa-solid fa-plus"></i> Add Task</button>
+            </div>
+        </div>
+    </form>
+    <!-- Your custom JavaScript for photo handling -->
+    <script>
+        // JavaScript for adding/deleting photos
+        const photosInput = document.getElementById('photos');
+        const photoList = document.getElementById('photoList');
+        const deleteButton = document.getElementById('deletePhotos');
+        const addTaskButton = document.getElementById('addTask');
+        
+        photosInput.addEventListener('change', handlePhotoUpload);
+        deleteButton.addEventListener('click', deleteSelectedPhotos);
+        
+        function handlePhotoUpload() {
+            // Display uploaded photos
+            const files = photosInput.files;
+            for (let i = 0; i < files.length; i++) {
+                const imgContainer = document.createElement('div');
+                imgContainer.className = 'img-container mb-2 me-2';
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(files[i]);
+                img.style.maxWidth = '100px';
+                img.style.maxHeight = '100px';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'delete-checkbox';
+                imgContainer.appendChild(img);
+                imgContainer.appendChild(checkbox);
+                photoList.appendChild(imgContainer);
+            }
+
+            // Show the "Delete Selected Photos" button if photos are selected
+            if (files.length > 0) {
+                deleteButton.style.display = 'block';
+            }
+        }
+        
+        function deleteSelectedPhotos() {
+            const selectedCheckboxes = document.querySelectorAll('.delete-checkbox:checked');
+            selectedCheckboxes.forEach(checkbox => {
+                const imgContainer = checkbox.parentElement;
+                imgContainer.remove();
+            });
+
+            // Hide the "Delete Selected Photos" button if there are no more photos
+            if (photoList.children.length === 0) {
+                deleteButton.style.display = 'none';
+            }
+        }
+
+        // Add Task Button Click Handler
+        addTaskButton.addEventListener('click', () => {
+            // Check for blank fields
+            const requiredFields = document.querySelectorAll('input[required], textarea[required], select[required]');
+            let hasBlankFields = false;
+
+            requiredFields.forEach((field) => {
+                if (!field.value.trim()) {
+                    hasBlankFields = true;
+                    field.classList.add('blank-field');
+                } else {
+                    field.classList.remove('blank-field');
+                }
+            });
+
+            // Check for blank file input
+            const fileInput = document.querySelector('input[type="file"][required]');
+            if (fileInput && fileInput.files.length === 0) {
+                hasBlankFields = true;
+                fileInput.classList.add('blank-field');
+            } else if (fileInput) {
+                fileInput.classList.remove('blank-field');
+            }
+
+            if (hasBlankFields) {
+                Swal.fire({
+                   title: "Please fill out all required fields",
+                   icon: "error",
+                   confirmButtonColor: "#d44e10",
+                   confirmButtonText: "Try Again",
+               });
+                return; // Prevent form submission
+            }
+            // Prepare the form data
+            const formData = new FormData(document.querySelector('form'));
+            
+            // Get the CSRF token from the form
+            const csrfToken = formData.get('csrfmiddlewaretoken');
+
+            // Send an AJAX POST request to save the task
+            fetch('/addTask/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': csrfToken // Include the CSRF token
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Task added successfully, you can perform any additional actions here
+                    Swal.fire({
+                        title: "Task Added",
+                        icon: "success",
+                        confirmButtonColor: "#28a745",
+                        confirmButtonText: "Ok",
+                    });
+                } else {
+                    // Handle any errors here
+                    alert('Failed to add task.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+        
+    </script>
+
+{% endblock %}

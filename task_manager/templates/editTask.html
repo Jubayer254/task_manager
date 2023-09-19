@@ -1,0 +1,167 @@
+{% extends 'layout.html' %}
+{% block title %}Edit Tasks{% endblock %}
+{% block content %}
+<div class="container">
+  <!-- Display tasks -->
+  <div class="row mt-3">
+    <div class="col-md-12">
+    
+      <div class="custom-form custom-form-container">
+        <h4 class="mt-2 mb-4">Edit Tasks</h4>
+        <table class="table table-bordered mt-3" id="example">
+        <thead>
+            <tr>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Due Date</th>
+            <th>Priority</th>
+            <th>Creation Date</th>
+            <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr id="task-row-{{ task.id }}">
+            <td>{{ task.title }}</td>
+            <td>{{ task.description }}</td>
+            <td>{{ task.due_date }}</td>
+            <td>{{ task.priority }}</td>
+            <td>{{ task.creation_date }}</td>
+            <td>
+              <button type="button" class="btn btn-sm btn-primary mt-1 edit-task" data-toggle="modal" data-target="#editTaskModal" data-task-id="{{ task.id }}">
+                  <i class="fa-solid fa-pen"></i> Edit
+              </button>
+          </td>
+            </tr>
+            {% empty %}
+            <tr>
+            <td colspan="8">No tasks available.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal for editing task -->
+<div class="container-fluid modal fade" id="editTaskModal" tabindex="-1" role="dialog" aria-labelledby="editTaskModalLabel" aria-hidden="true" style="padding: 100px 100px 100px 100px">
+    <!-- Modal content here -->
+    <!-- ... -->
+    <form id="editTaskForm">
+        {% csrf_token %}
+        <input type="hidden" id="taskId" name="taskId">
+        <!-- Input fields for editing task details -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label style="color:White;" for="editTitle">Title</label>
+                    <input type="text" class="form-control" id="editTitle" name="editTitle">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label style="color:White;" for="editDescription">Description</label>
+                    <textarea class="form-control" id="editDescription" name="editDescription"></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label style="color:White;" for="editDueDate">Due Date</label>
+                    <input type="date" class="form-control" id="editDueDate" name="editDueDate">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label style="color:White;" for="editPriority">Priority</label>
+                    <select class="form-select" id="editPriority" name="editPriority">
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <!-- Add more input fields for editing -->
+        <button type="submit" class="btn btn-primary mt-4">Save Changes</button>
+    </form>
+</div>
+
+<script>
+$(document).ready(function () {
+    $('#example').DataTable({
+        paging: true,
+        searching: true,
+        order: [[5, 'desc']],
+    });
+
+    // Function to populate the edit modal with task details
+    function populateEditModal(taskId) {
+        $.ajax({
+            type: 'GET',
+            url: '/get_task_details/' + taskId + '/',
+            dataType: 'json',
+            success: function (data) {
+                $('#taskId').val(taskId);
+                $('#editTitle').val(data.title);
+                $('#editDescription').val(data.description);
+                $('#editDueDate').val(data.due_date);
+                $('#editPriority').val(data.priority);
+                // Add more fields as needed
+
+                $('#editTaskModal').modal('show');
+            },
+            error: function (error) {
+                console.log(error);
+            }
+        });
+    }
+
+    // Click event handler for the "Edit" button
+    $('.edit-task').click(function () {
+        var taskId = $(this).data('task-id');
+        populateEditModal(taskId);
+    });
+
+    // Submit the edit form and update the table
+    $('#editTaskForm').submit(function (e) {
+        e.preventDefault();
+        var formData = $(this).serialize();
+        var taskId = $('#taskId').val();
+
+        $.ajax({
+            type: 'POST',
+            url: '/update_task/' + taskId + '/',
+            data: formData,
+            dataType: 'json',
+            success: function (data) {
+                // Update the task details in the table
+                var taskRow = $('#task-row-' + taskId);
+                taskRow.find('td:eq(0)').text(data.title);
+                taskRow.find('td:eq(1)').text(data.description);
+                taskRow.find('td:eq(2)').text(data.due_date);
+                taskRow.find('td:eq(3)').text(data.priority);
+                // Update more columns if needed
+
+                location.reload();
+
+                // Optionally, you can display a success message
+                $('#success-message').text('Task updated successfully').show();
+
+                // Hide the success message after a few seconds
+                setTimeout(function () {
+                    $('#success-message').fadeOut('slow');
+                }, 3000);
+            },
+            error: function (error) {
+                console.log(error);
+            }
+        });
+    });
+});
+</script>
+
+
+{% endblock %}

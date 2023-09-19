@@ -1,0 +1,106 @@
+{% extends 'layout.html' %}
+{% block title %}Delete Tasks{% endblock %}
+{% block content %}
+<div class="container">
+  <!-- Display tasks -->
+  <div class="row mt-3">
+    <div class="col-md-12">
+      <div class="custom-form custom-form-container">
+        <h4 class="mt-2 mb-4">Delete Tasks</h4>
+        <table class="table table-bordered mt-3" id="example">
+        <thead>
+            <tr>
+            <th>Title</th>
+            <th>Images</th>
+            <th>Description</th>
+            <th>Due Date</th>
+            <th>Priority</th>
+            <th>Creation Date</th>
+            <th>Completion Status</th> 
+            <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr id="task-row-{{ task.id }}">
+            <td>{{ task.title }}</td>
+            <td>
+                <!-- Display task images -->
+                {% for photo in task.photos.all %}
+                <img src="{{ photo.image.url }}" alt="{{ task.title }}" class="img-thumbnail" width="100">
+                {% endfor %}
+            </td>
+            <td>{{ task.description }}</td>
+            <td>{{ task.due_date }}</td>
+            <td>{{ task.priority }}</td>
+            <td>{{ task.creation_date }}</td>
+            <td class="completion-status" style="text-align: center;">
+                {% if task.is_completed %}
+                <i style="color:green;" class="fa-solid fa-circle-check"></i>
+                {% else %}
+                <i style="color:red;" class="fa-solid fa-circle-xmark"></i>
+                {% endif %}
+            </td>
+            <td>
+                <button type="button" class="btn btn-sm btn-danger mt-1 delete-task" data-task-id="{{ task.id }}">
+                <i class="fa-solid fa-trash"></i> Delete
+                </button>
+            </td>
+            </tr>
+            {% empty %}
+            <tr>
+            <td colspan="8">No tasks available.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+$(document).ready(function() {
+  $('#example').DataTable({
+          paging: true,   // Enable pagination
+          searching: true, // Enable searching
+          order: [[5, 'desc']],
+      });
+  $('.delete-task').click(function() {
+    var taskId = $(this).data('task-id');
+    // Display a confirmation dialog using SweetAlert
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'You are about to delete this task. This action cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // User confirmed, send the delete request
+        $.ajax({
+          type: 'POST',
+          url: '/delete_task/', // Replace with the actual URL for deleting a task
+          data: {
+            task_id: taskId,
+            csrfmiddlewaretoken: '{{ csrf_token }}' // Include the CSRF token
+          },
+          success: function(data) {
+            // Task deleted successfully, remove the corresponding row from the table
+            var taskRow = $('#task-row-' + taskId);
+            taskRow.remove();
+          },
+          error: function(error) {
+            // Handle any errors here
+            console.log(error);
+          }
+        });
+      }
+    });
+  });
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends 'layout.html' %}
+{% block title %}My Tasks{% endblock %}
+{% block content %}
+<div class="container">
+  <!-- Display tasks -->
+  <div class="row mt-3">
+    <div class="col-md-12">
+      <div class="custom-form custom-form-container">
+        <h4 class="mt-2 mb-4">My Tasks</h4>
+        <table class="table table-bordered mt-3" id="example">
+        <thead>
+            <tr>
+            <th>Title</th>
+            <th>Images</th>
+            <th>Description</th>
+            <th>Due Date</th>
+            <th>Priority</th>
+            <th>Creation Date</th>
+            <th>Completion Status</th> 
+            <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr id="task-row-{{ task.id }}">
+            <td>{{ task.title }}</td>
+            <td>
+                <!-- Display task images -->
+                {% for photo in task.photos.all %}
+                <img src="{{ photo.image.url }}" alt="{{ task.title }}" class="img-thumbnail" width="100">
+                {% endfor %}
+            </td>
+            <td>{{ task.description }}</td>
+            <td>{{ task.due_date }}</td>
+            <td>{{ task.priority }}</td>
+            <td>{{ task.creation_date }}</td>
+            <td class="completion-status" style="text-align: center;">
+                {% if task.is_completed %}
+                <i style="color:green;" class="fa-solid fa-circle-check"></i>
+                {% else %}
+                <i style="color:red;" class="fa-solid fa-circle-xmark"></i>
+                {% endif %}
+            </td>
+            <td>
+                {% if not task.is_completed %}
+                <button type="button" class="btn btn-sm btn-success mt-1 complete-task" data-task-id="{{ task.id }}">
+                <i class="fa-solid fa-check"></i> Complete
+                </button>
+                {% else %}
+                <button type="button" class="btn btn-sm btn-success mt-1 complete-task disabled">
+                <i class="fa-solid fa-check"></i> Complete
+                </button>
+                {% endif %}
+            </td>
+            </tr>
+            {% empty %}
+            <tr>
+            <td colspan="8">No tasks available.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+$(document).ready(function() {
+  $('#example').DataTable({
+      paging: true,   // Enable pagination
+      searching: true, // Enable searching
+      order: [[5, 'desc']],
+  });
+  $('.complete-task').click(function() {
+    var taskId = $(this).data('task-id');
+
+    $.ajax({
+      type: 'POST',
+      url: '/complete_task/', // Replace with the actual URL for completing a task
+      data: {
+        task_id: taskId,
+        csrfmiddlewaretoken: '{{ csrf_token }}' // Include the CSRF token
+      },
+      success: function(data) {
+        // Task completed successfully, update the UI
+        // For example, change the task's completion status icon
+        var taskRow = $('#task-row-' + taskId);
+        var completionStatusCell = taskRow.find('.completion-status');
+
+        if (completionStatusCell.length > 0) {
+          completionStatusCell.html('<i style="color:green;" class="fa-solid fa-circle-check"></i>');
+        }
+
+        // Disable the Complete button
+        var completeButton = taskRow.find('.complete-task');
+        completeButton.addClass('disabled');
+      },
+      error: function(error) {
+        // Handle any errors here
+        console.log(error);
+      }
+    });
+  });
+});
+</script>
+
+
+
+
+{% endblock %}
